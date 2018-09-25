@@ -9,24 +9,24 @@ var mixin = {
             temp += (minutes < 10 ? ":0" : ":") + minutes;
             return temp;
         },
-        eventDurationInQuants: function(event) {
-            return (event.stop - event.start)/60/15;
+        durationInQuants: function(seconds) {
+            return Math.round(seconds/60/15);
         }
     }
 }
 
 Vue.component("event", {
     mixins: [ mixin ],
-    props: [ "event" ],
+    props: [ "event", "startTime", "endTime" ],
     computed: {
         eventDuration() {
-            return this.eventDurationInQuants(this.event);
+            return this.durationInQuants(this.endTime - this.startTime);
         },
-        startTime() {
+        realStartTime() {
             startDate = new Date(this.event.start * 1000);
             return this.formatTime(startDate);
         },
-        endTime() {
+        realEndTime() {
             endDate = new Date(this.event.stop * 1000);
             return this.formatTime(endDate);
         }
@@ -34,35 +34,55 @@ Vue.component("event", {
     template: `
         <td :colspan="eventDuration">
             {{ event.title }}<br/>
-            {{ startTime }}/{{ endTime }}
+            {{ realStartTime }}/{{ realEndTime }}
         </td>
     `
 })
 
 Vue.component("channel", {
     mixins: [ mixin ],
-    props: [ "channel", "fillTime" ],
+    props: [ "channel", "startTime", "endTime" ],
     data() {
         return {
             events: []
         }
     },
-    methods: {
-        channelTimeDuration() {
-            var duration = 0;
+    computed: {
+        leftFill() {
+            var earliestEvent = this.endTime;
             for (var i = 0; i < this.events.length; i++) {
-                duration += this.eventDurationInQuants(this.events[i]);
+                if (this.events[i].start < earliestEvent) {
+                    earliestEvent = this.events[i].start;
+                }
             }
-            this.$emit("channelDuration", duration);
-            return duration;
+
+            if (earliestEvent < this.startTime) {
+                return 0;
+            } else {
+                return this.durationInQuants(earliestEvent - this.startTime);
+            }
         }
     },
-    computed: {
-        remainingDuration() {
-            if (this.fillTime - this.channelTimeDuration() > 0)
-                return this.fillTime - this.channelTimeDuration();
-            return 0;
-        },
+    methods: {
+        eventVisible(event) {
+
+            if (event.start >= this.startTime &&
+                event.start < this.endTime) {
+                return true;
+            }
+
+            if (event.stop > this.startTime &&
+                event.stop <= this.endTime) {
+                return true;
+            }
+
+            if (event.start < this.startTime &&
+                event.stop > this.endTime) {
+                return true;
+            }
+
+            return false;
+        }
     },
     mounted() {
         axios
@@ -72,26 +92,19 @@ Vue.component("channel", {
     template: `
         <tr>
             <th>{{ channel.name }}</th>
-            <event v-for="event in events" :key="event.eventId" :event="event">
+            <td :colspan="leftFill" v-if="leftFill > 0"></td>
+            <event v-for="event in events" :key="event.eventId" :event="event" :startTime="Math.max(event.start, startTime)" :endTime="Math.min(event.stop, endTime)" v-if="eventVisible(event)">
             </event>
-            <td :colspan="remainingDuration" v-if="remainingDuration > 0"></td>
         </tr>
     `
 })
 
 Vue.component("epg", {
+    props: [ "startTime", "endTime" ],
     mixins: [ mixin ],
     data() {
         return {
             channels: [],
-            maxChannelDuration: 0
-        }
-    },
-    methods: {
-        onChannelDuration(duration) {
-            if (duration > this.maxChannelDuration) {
-                this.maxChannelDuration = duration;
-            }
         }
     },
     mounted() {
@@ -101,7 +114,7 @@ Vue.component("epg", {
     },
     template: `
         <table>
-            <channel v-for="channel in channels" :key="channel.uuid" :channel="channel" :fillTime="maxChannelDuration" @channelDuration="onChannelDuration">
+            <channel v-for="channel in channels" :key="channel.uuid" :channel="channel" :startTime="startTime" :endTime="endTime">
             </channel>
         </table>
     `
