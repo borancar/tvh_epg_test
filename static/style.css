@@ -1,3 +1,14 @@
-#epg table { table-layout: fixed; }
-#epg table th { background-color: #6b5b95; color: #ffffff; }
-#epg table td { background-color: #878f99; color: #ffffff; }
+#epg table {
+    width: 1920px;
+    table-layout: fixed;
+}
+
+#epg table th {
+    background-color: #6b5b95;
+    color: #ffffff;
+}
+
+#epg table td {
+    background-color: #878f99;
+    color: #ffffff;
+}
