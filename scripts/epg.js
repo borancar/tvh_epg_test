@@ -61,6 +61,23 @@ Vue.component("channel", {
             } else {
                 return this.durationInQuants(earliestEvent - this.startTime);
             }
+        },
+        rightFill() {
+            var latestEnd = this.startTime;
+            for (var i = 0; i < this.events.length; i++) {
+                if (this.events[i].stop > latestEnd) {
+                    latestEnd = this.events[i].stop;
+                }
+            }
+
+            if (latestEnd > this.endTime) {
+                return 0;
+            } else if (latestEnd == this.startTime) {
+                // left fill will cover it all
+                return 0;
+            } else {
+                return this.durationInQuants(this.endTime - latestEnd);
+            }
         }
     },
     methods: {
@@ -95,6 +112,7 @@ Vue.component("channel", {
             <td :colspan="leftFill" v-if="leftFill > 0"></td>
             <event v-for="event in events" :key="event.eventId" :event="event" :startTime="Math.max(event.start, startTime)" :endTime="Math.min(event.stop, endTime)" v-if="eventVisible(event)">
             </event>
+            <td :colspan="rightFill" v-if="rightFill > 0"></td>
         </tr>
     `
 })
