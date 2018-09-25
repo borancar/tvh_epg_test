@@ -11,7 +11,10 @@ var mixin = {
         },
         durationInQuants: function(seconds) {
             return Math.round(seconds/60/15);
-        }
+        },
+        durationInSeconds: function(quants) {
+            return quants*15*60;
+        },
     }
 }
 
@@ -125,6 +128,15 @@ Vue.component("epg", {
             channels: [],
         }
     },
+    methods: {
+        quantToTime(startTime, i) {
+            var currentTime = parseInt(startTime) + this.durationInSeconds(i);
+
+            dateTime = new Date(currentTime * 1000);
+
+            return this.formatTime(dateTime);
+        }
+    },
     mounted() {
         axios
           .get("/api/channel/grid")
@@ -132,8 +144,14 @@ Vue.component("epg", {
     },
     template: `
         <table>
-            <channel v-for="channel in channels" :key="channel.uuid" :channel="channel" :startTime="startTime" :endTime="endTime">
-            </channel>
+            <thead>
+                <th>Channel</th>
+                <th v-for="i in durationInQuants(endTime - startTime)">{{ quantToTime(startTime, i-1) }}</th>
+            </thead>
+            <tbody>
+                <channel v-for="channel in channels" :key="channel.uuid" :channel="channel" :startTime="startTime" :endTime="endTime">
+                </channel>
+            </tbody>
         </table>
     `
 })
